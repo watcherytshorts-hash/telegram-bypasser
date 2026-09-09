@@ -1,3 +1,21 @@
+import subprocess
+import sys
+
+# --- FORCE INSTALL DEPENDENCIES AT RUNTIME ---
+def install_packages():
+    try:
+        import telebot
+        import requests
+    except ImportError:
+        print("📦 Dependencies missing. Forcing installation now...")
+        # Automatically run pip install for pyTelegramBotAPI and requests
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyTelegramBotAPI", "requests"])
+        print("✅ Installation complete! Launching bot...")
+
+# Execute the auto-install before running anything else
+install_packages()
+
+# --- YOUR ACTUAL BOT CODE STARTS HERE ---
 import os
 import requests
 import telebot
@@ -15,33 +33,27 @@ def send_welcome(message):
 def bypass_link(message):
     url = message.text.strip()
     
-    # Simple check if user sent a link
     if not url.startswith("http://") and not url.startswith("https://"):
-        bot.reply_to(message, "❌ Please send a valid link (starting with http:// or https://).")
+        bot.reply_to(message, "❌ Please send a valid link.")
         return
         
     bot.reply_to(message, "⏳ Bypassing your link... please wait...")
 
     try:
-        # Note: You need a working public bypasser API endpoint.
-        # Below is a standard structural example using common community bypass query formats
-        api_url = f"https://fluxteam.net{url}" # Alternative: Use active community APIs like loots, bypass.vip etc.
-        
+        # Request to a community bypass API
+        api_url = f"https://fluxteam.net{url}"
         response = requests.get(api_url, timeout=15)
         data = response.json()
         
-        # Check if the API returned a successful bypass key/result
         if response.status_code == 200 and "key" in data:
-            bypassed_key = data["key"]
-            bot.reply_to(message, f"✅ **Bypass Successful!**\n\n🔑 **Key/Link:** `{bypassed_key}`", parse_mode="Markdown")
+            bot.reply_to(message, f"✅ **Bypass Successful!**\n\n🔑 **Key:** `{data['key']}`", parse_mode="Markdown")
         elif response.status_code == 200 and "result" in data:
-            bypassed_key = data["result"]
-            bot.reply_to(message, f"✅ **Bypass Successful!**\n\n🔑 **Key/Link:** `{bypassed_key}`", parse_mode="Markdown")
+            bot.reply_to(message, f"✅ **Bypass Successful!**\n\n🔑 **Key:** `{data['result']}`", parse_mode="Markdown")
         else:
             bot.reply_to(message, "❌ Failed to bypass. The link might be invalid, or the API is currently down.")
             
     except Exception as e:
-        bot.reply_to(message, f"⚠️ An error occurred while processing your request.")
+        bot.reply_to(message, "⚠️ An error occurred while processing your request.")
 
 # Start the bot
 bot.infinity_polling()
