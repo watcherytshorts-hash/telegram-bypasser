@@ -1,61 +1,47 @@
-import telebot
+import os
 import requests
-import time
+import telebot
 
-# --- 1. YOUR KEYS ---
-# Get this from @BotFather
-BOT_TOKEN = "8813724096:AAFdHvuoERJ-L8d8OZldxLiCu6PV1DuKOEs" 
+# Replace with your token from @BotFather
+API_TOKEN = '8813724096:AAFdHvuoERJ-L8d8OZldxLiCu6PV1DuKOEs'
+bot = telebot.TeleBot(API_TOKEN)
 
-# --- 2. THE SECRET ENGINES (The "Pro" Part) ---
-# We use a list of APIs. If one fails, we swap to the next.
-# These are the actual backends used by bypass websites.
-APIS = [
-    "https://bypass.vip",
-    "https://bypass.city", 
-    "https://adlinkbypass.com" 
-]
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, "👋 Welcome to the Key System Bypasser Bot!\n\n"
+                          "Send me your Delta or Linkvertise link, and I will attempt to bypass it.")
 
-bot = telebot.TeleBot(BOT_TOKEN)
-
-def bypass_logic(url):
-    """Try all engines until one works"""
-    for api in APIS:
-        try:
-            # The magic request
-            response = requests.get(api + url, timeout=10)
-            data = response.json()
-            
-            # Check different success keys (APIs use different names)
-            if data.get('status') == 'success' or 'destination' in data or 'bypassed' in data:
-                return data.get('destination') or data.get('result') or data.get('bypassed')
-        except:
-            continue # If one fails, try the next one immediately
-    return None
-
-@bot.message_handler(func=lambda m: True)
-def handle_link(message):
-    user_url = message.text.strip()
+@bot.message_handler(func=lambda message: True)
+def bypass_link(message):
+    url = message.text.strip()
     
-    # Simple check to see if it's a link
-    if "http" in user_url:
-        status_msg = bot.reply_to(message, "⚡ **Bypassing...**")
+    # Simple check if user sent a link
+    if not url.startswith("http://") and not url.startswith("https://"):
+        bot.reply_to(message, "❌ Please send a valid link (starting with http:// or https://).")
+        return
         
-        # Run the secret engine
-        result = bypass_logic(user_url)
+    bot.reply_to(message, "⏳ Bypassing your link... please wait...")
+
+    try:
+        # Note: You need a working public bypasser API endpoint.
+        # Below is a standard structural example using common community bypass query formats
+        api_url = f"https://fluxteam.net{url}" # Alternative: Use active community APIs like loots, bypass.vip etc.
         
-        if result:
-            bot.edit_message_text(
-                f"✅ **Bypass Successful!**\n\n**Link:** {result}", 
-                chat_id=message.chat.id, 
-                message_id=status_msg.message_id
-            )
+        response = requests.get(api_url, timeout=15)
+        data = response.json()
+        
+        # Check if the API returned a successful bypass key/result
+        if response.status_code == 200 and "key" in data:
+            bypassed_key = data["key"]
+            bot.reply_to(message, f"✅ **Bypass Successful!**\n\n🔑 **Key/Link:** `{bypassed_key}`", parse_mode="Markdown")
+        elif response.status_code == 200 and "result" in data:
+            bypassed_key = data["result"]
+            bot.reply_to(message, f"✅ **Bypass Successful!**\n\n🔑 **Key/Link:** `{bypassed_key}`", parse_mode="Markdown")
         else:
-            bot.edit_message_text(
-                "❌ **Failed:** Could not bypass this link. It might be patched.", 
-                chat_id=message.chat.id, 
-                message_id=status_msg.message_id
-            )
+            bot.reply_to(message, "❌ Failed to bypass. The link might be invalid, or the API is currently down.")
+            
+    except Exception as e:
+        bot.reply_to(message, f"⚠️ An error occurred while processing your request.")
 
-print("🚀 Bot is running...")
+# Start the bot
 bot.infinity_polling()
-
